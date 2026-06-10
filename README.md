@@ -32,6 +32,7 @@ A fully offline personal productivity PWA built for Jose Reyna. Tasks with time 
 ## Honest limitations
 
 - **Phone calendar**: a web app can't write directly into Samsung/Google Calendar. Instead, tap the calendar icon on any task (or **Export .ics** in the Calendar view) — opening the downloaded `.ics` file imports the events, including weekly recurrence, into your phone's calendar.
-- **Voice capture**: uses the browser's speech recognition (Chrome / Samsung Internet). On most phones it needs an internet connection while transcribing. Everything else works offline.
+- **Live voice capture**: uses the browser's speech recognition. Works in **Chrome and Samsung Internet**; **Brave blocks it by design**. It usually needs an internet connection while transcribing.
+- **Voice memos**: the **Upload voice memo** button (mic → upload) transcribes recorded audio files (m4a, mp3, wav) on your device using a small Whisper speech model. First use downloads ~40 MB; after that it's cached and works offline. Works in Brave too.
 - **Samsung Notes**: no app can read Samsung Notes. MissionDeck has its own notes with search, tags, dictation, and markdown export instead.
 - **Data lives on the device**: clearing Chrome's site data deletes it. Use **Settings → Export** for a JSON backup.

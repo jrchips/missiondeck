@@ -1,5 +1,5 @@
 /* MissionDeck service worker — cache-first app shell for full offline use */
-const CACHE = "missiondeck-v1.0.0";
+const CACHE = "missiondeck-v1.1.0";
 const ASSETS = [
   "./",
   "./index.html",

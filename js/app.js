@@ -93,7 +93,6 @@ const KEY = "missiondeck-v1";
 function seedState() {
   const pSchool = uid(), pALS = uid(), pPersonal = uid(), pFinance = uid();
   const nbSchool = uid(), nbALS = uid(), nbPersonal = uid();
-  const tue = nextWeekday(2, 23, 59); // next Tuesday 11:59 PM
   const plus = days => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(17, 0, 0, 0); return d; };
 
   return {
@@ -106,15 +105,6 @@ function seedState() {
       { id: pFinance,  name: "Finance",                  color: "#5CC97A" }
     ],
     tasks: [
-      { id: uid(), title: "UMGC weekly assignment", projectId: pSchool, priority: "high",
-        horizon: "week", due: dtLocal(tue), recur: "weekly", status: "todo",
-        subtasks: [
-          { id: uid(), text: "Read course materials", done: false },
-          { id: uid(), text: "Complete the assignment", done: false },
-          { id: uid(), text: "Submit in the LEO portal before midnight", done: false }
-        ],
-        notes: "Due every Tuesday at 11:59 PM. Completing this auto-creates next week's task.",
-        timeSpent: 0, createdAt: Date.now() },
       { id: uid(), title: "File Articles of Organization — Colorado LLC", projectId: pALS,
         priority: "high", horizon: "week", due: dtLocal(plus(5)), recur: "none", status: "todo",
         subtasks: [], notes: "$50 at sos.colorado.gov — instant online. First domino for everything else.",
@@ -177,7 +167,75 @@ function load() {
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
   return s;
 }
+/* ---- Real UMGC schedule (from D2L calendar, Summer 2026) ---- */
+const UMGC_2265 = [
+  ["2026-06-09", [
+    ["Unit 4 Assignment: Cloud-Based AI Platform Comparison", "high", ""],
+    ["Unit 4 Assignment: Exploring Content Creation Using Generative AI", "high", ""],
+    ["Unit 4 Assignment: Project Schedule Development with Microsoft Project", "high", ""],
+    ["Unit 4 Discussion: Impact of Generative AI on Creative Industry Professions and Practices", "med", "Availability ends tonight 11:59 PM"],
+    ["Unit 4 Discussion: Making the Case for AI: Metrics, Benefits, and Persuasion", "med", ""]
+  ]],
+  ["2026-06-16", [
+    ["Unit 5 Assignment 1: AI-Enhanced Project Management System Design", "high", ""],
+    ["Unit 5 Assignment 2: Case Study Analysis - AI-Driven Project Management Implementation", "high", ""],
+    ["Unit 5 Assignment: Proposal for Unit 7 Project", "high", ""],
+    ["Unit 5 Quiz: Comprehensive AI Data Management", "high", ""],
+    ["Unit 5 Quiz", "high", ""]
+  ]],
+  ["2026-06-23", [
+    ["Unit 6 Assignment: IS Project Risk Management Plan", "high", ""],
+    ["Unit 6 Assignment: Making Sense of AI: Interpreting and Evaluating Language Intelligence", "high", ""],
+    ["Unit 6 Quiz", "high", ""],
+    ["Unit 6 Discussion: AI Project Risk Considerations", "med", ""]
+  ]],
+  ["2026-06-30", [
+    ["Unit 7 Assignment: Risk Mitigation Effectiveness Evaluation", "high", ""],
+    ["Unit 7 Assignment: Final Creative Project: Marketing Campaign Using Generative AI", "high", ""],
+    ["Unit 7 Quiz: Domain-Specific AI Applications", "high", ""],
+    ["Unit 7 Discussion: Domain Knowledge in AI Solutions", "med", "Availability ends Jul 7"],
+    ["Unit 7 Discussion: Risk Management in Agile Project Environments", "med", ""]
+  ]],
+  ["2026-07-07", [
+    ["Unit 8 Assignment: Comprehensive Project Management Framework Development", "high", ""],
+    ["Unit 8 Assignment: Comprehensive AI Solution Development", "high", ""],
+    ["Unit 8 Discussion: Current State and Future of LLMs and Generative AI", "med", ""],
+    ["Unit 1 Discussion: AI in Everyday Life (availability ends)", "med", ""],
+    ["Unit 3 Discussion: Ethical Dilemmas in AI Implementation (availability ends)", "med", ""],
+    ["Unit 5 Discussion: Data Quality and AI Performance (availability ends)", "med", ""]
+  ]]
+];
+
+function ensureUMGC(s) {
+  s.flags = s.flags || {};
+  if (s.flags.umgcSummer2026) return;
+  let proj = s.projects.find(p => /umgc|school/i.test(p.name));
+  if (!proj) {
+    proj = { id: uid(), name: "School — UMGC", color: "#9B7EDE" };
+    s.projects.push(proj);
+  }
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  for (const [date, items] of UMGC_2265) {
+    const dueDay = new Date(date + "T23:59");
+    const diffDays = Math.round((new Date(date + "T00:00") - now) / 86400000);
+    if (diffDays < -1) continue; // skip dates already past
+    const horizon = diffDays <= 1 ? "day" : diffDays <= 7 ? "week" : "month";
+    const status = diffDays <= 7 ? "todo" : "backlog";
+    for (const [title, priority, note] of items) {
+      s.tasks.push({
+        id: uid(), title, projectId: proj.id, priority,
+        horizon, due: dtLocal(dueDay), recur: "none", status,
+        subtasks: [], notes: note || "From the UMGC D2L calendar.",
+        timeSpent: 0, createdAt: Date.now(), completedAt: null
+      });
+    }
+  }
+  s.flags.umgcSummer2026 = true;
+  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+}
+
 let S = load();
+ensureUMGC(S);
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(S)); }
   catch (e) { toast("Could not save — storage unavailable"); }
@@ -480,58 +538,121 @@ function stopVoice() {
 
 function openVoice() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    openModal(`<div class="modal-title">Voice capture</div>
-      <p style="color:var(--muted);line-height:1.6">Speech recognition isn't available in this browser. On your phone, use <strong>Chrome</strong> or <strong>Samsung Internet</strong>. You can still add tasks with the + button.</p>
-      <div class="modal-actions"><button class="btn btn-accent" onclick="document.getElementById('modal-backdrop').classList.add('hidden')">OK</button></div>`);
-    return;
-  }
-  openModal(`
-    <div class="modal-title">Speak your task</div>
-    <div class="voice-stage">
+  const isBrave = !!(navigator.brave);
+  const liveBlock = SR ? `
       <div class="voice-orb listening" id="vc-orb">${ICONS.mic}</div>
       <div style="font-size:.8rem;color:var(--muted)">Try: “Add a <strong>high priority school</strong> task, finish week six assignment, <strong>due Tuesday</strong>”</div>
       <div class="voice-transcript" id="vc-text">Listening…</div>
-      <div class="modal-actions">
+      <div class="modal-actions" style="justify-content:center">
         <button class="btn" id="vc-cancel">Cancel</button>
         <button class="btn btn-accent" id="vc-done">Done speaking</button>
-      </div>
+      </div>` : `
+      <p style="color:var(--muted);line-height:1.6;font-size:.88rem">Live speech recognition isn't available in ${isBrave ? "<strong>Brave</strong> (it blocks the speech engine on purpose)" : "this browser"} — it works in <strong>Chrome</strong> and <strong>Samsung Internet</strong>. But you can still use a recorded voice memo below.</p>`;
+
+  openModal(`
+    <div class="modal-title">Add task by voice</div>
+    <div class="voice-stage">
+      ${liveBlock}
+      <div style="border-top:1px solid var(--border);margin:16px 0 14px"></div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px">Or transcribe a recorded <strong>voice memo</strong> (m4a, mp3, wav…). Runs on this device — first use downloads a ~40 MB speech model, then it works offline too.</div>
+      <input type="file" id="vc-file" accept="audio/*" style="display:none">
+      <button class="btn" id="vc-upload" style="width:100%">${ICONS.download} Upload voice memo</button>
+      <div id="vc-status" style="font-size:.8rem;color:var(--accent);margin-top:10px;min-height:1.2em"></div>
+      ${SR ? "" : `<div class="modal-actions" style="justify-content:center"><button class="btn" id="vc-cancel">Cancel</button></div>`}
     </div>`);
 
   let finalText = "";
-  recog = new SR();
-  recog.lang = "en-US";
-  recog.interimResults = true;
-  recog.continuous = true;
-  recog.onresult = (ev) => {
-    let interim = "";
-    for (let i = ev.resultIndex; i < ev.results.length; i++) {
-      if (ev.results[i].isFinal) finalText += ev.results[i][0].transcript + " ";
-      else interim += ev.results[i][0].transcript;
-    }
-    const el = $("#vc-text");
-    if (el) el.textContent = (finalText + interim).trim() || "Listening…";
-  };
-  recog.onerror = () => {
-    const el = $("#vc-text");
-    if (el && !finalText) el.textContent = "Couldn't hear anything — check mic permission. (Voice needs an internet connection on most phones.)";
-  };
-  recog.onend = () => { const orb = $("#vc-orb"); if (orb) orb.classList.remove("listening"); };
-  try { recog.start(); } catch (e) {}
+  if (SR) {
+    recog = new SR();
+    recog.lang = "en-US";
+    recog.interimResults = true;
+    recog.continuous = true;
+    recog.onresult = (ev) => {
+      let interim = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        if (ev.results[i].isFinal) finalText += ev.results[i][0].transcript + " ";
+        else interim += ev.results[i][0].transcript;
+      }
+      const el = $("#vc-text");
+      if (el) el.textContent = (finalText + interim).trim() || "Listening…";
+    };
+    recog.onerror = () => {
+      const el = $("#vc-text");
+      if (el && !finalText) el.textContent = "Couldn't hear anything — check mic permission, or use a voice memo below.";
+    };
+    recog.onend = () => { const orb = $("#vc-orb"); if (orb) orb.classList.remove("listening"); };
+    try { recog.start(); } catch (e) {}
 
-  $("#vc-cancel").onclick = closeModal;
-  $("#vc-done").onclick = () => {
+    $("#vc-done").onclick = () => {
+      stopVoice();
+      setTimeout(() => {
+        const text = finalText.trim() || (($("#vc-text") && !/^(Listening…|Couldn't hear)/.test($("#vc-text").textContent)) ? $("#vc-text").textContent.trim() : "");
+        if (!text) { toast("Didn't catch that"); closeModal(); return; }
+        const parsed = parseVoiceTask(text);
+        closeModal();
+        openTaskEditor(null, parsed);
+        toast("Review what I heard, then save");
+      }, 250);
+    };
+  }
+  const cancelBtn = $("#vc-cancel");
+  if (cancelBtn) cancelBtn.onclick = closeModal;
+
+  $("#vc-upload").onclick = () => $("#vc-file").click();
+  $("#vc-file").onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
     stopVoice();
-    setTimeout(() => {
-      const text = ($("#vc-text") ? $("#vc-text").textContent : finalText).trim();
-      if (!text || text === "Listening…") { toast("Didn't catch that"); closeModal(); return; }
+    const status = $("#vc-status");
+    const upBtn = $("#vc-upload");
+    upBtn.disabled = true; upBtn.style.opacity = ".5";
+    try {
+      const text = await transcribeFile(file, status);
+      if (!text) { status.textContent = "Couldn't find any speech in that file."; upBtn.disabled = false; upBtn.style.opacity = "1"; return; }
       const parsed = parseVoiceTask(text);
       closeModal();
       openTaskEditor(null, parsed);
-      toast("Review what I heard, then save");
-    }, 250);
+      toast("Transcribed — review and save");
+    } catch (err) {
+      status.textContent = navigator.onLine
+        ? "Transcription failed — that audio format may not be supported."
+        : "The speech model needs an internet connection the first time. Connect and try again.";
+      upBtn.disabled = false; upBtn.style.opacity = "1";
+    }
   };
 }
+
+/* ---- on-device Whisper transcription for uploaded voice memos ---- */
+let whisperPipe = null;
+async function transcribeFile(file, statusEl) {
+  const say = msg => { if (statusEl) statusEl.textContent = msg; };
+  if (!whisperPipe) {
+    say("Loading speech model (first time only, ~40 MB)…");
+    const { pipeline } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.0");
+    whisperPipe = await pipeline("automatic-speech-recognition", "Xenova/whisper-tiny.en", {
+      progress_callback: p => {
+        if (p.status === "progress" && p.total) say(`Downloading speech model… ${Math.round(100 * p.loaded / p.total)}%`);
+      }
+    });
+  }
+  say("Reading audio…");
+  const buf = await file.arrayBuffer();
+  const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  const audio = await ctx.decodeAudioData(buf);
+  let data;
+  if (audio.numberOfChannels > 1) {
+    const a = audio.getChannelData(0), b = audio.getChannelData(1);
+    data = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) data[i] = (a[i] + b[i]) / 2;
+  } else {
+    data = audio.getChannelData(0);
+  }
+  try { ctx.close(); } catch (e) {}
+  say("Transcribing… (longer memos take longer)");
+  const out = await whisperPipe(data, { chunk_length_s: 30, stride_length_s: 5 });
+  return (out && out.text ? out.text : "").trim();
+}
+
 
 const PROJECT_ALIASES = [
   { match: /\b(umgc|class|assignment|homework|course|school|semester|professor)\b/, name: "School — UMGC" },
@@ -586,6 +707,12 @@ function parseVoiceTask(text) {
     .replace(/\b(this week|next week|this month|next month|this year|six months?)\b/gi, "")
     .replace(/\s{2,}/g, " ").replace(/^[,\s]+|[,\s.]+$/g, "");
   if (title) out.title = title.charAt(0).toUpperCase() + title.slice(1);
+  // long voice memos: first sentence becomes the title, full transcript goes to notes
+  if (out.title.length > 90) {
+    const first = out.title.split(/[.!?]\s+/)[0] || out.title;
+    out.notes = "Full transcript: " + text;
+    out.title = first.length > 90 ? first.slice(0, 87) + "…" : first;
+  }
   return out;
 }
 
