@@ -23,14 +23,6 @@ const ROOMS = {
 
 export default function App() {
   const [activeRoom, setActiveRoom] = useState(null)
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -51,12 +43,9 @@ export default function App() {
   const ActiveComponent = room?.component
 
   return (
-    <div style={{ width:'100vw', height:'100vh', overflow:'hidden', background:'#07070e' }}>
-      {isMobile ? (
-        <MobileGrid onEnterRoom={enterRoom} />
-      ) : (
-        <DungeonMap onEnterRoom={enterRoom} activeRoom={activeRoom} />
-      )}
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#07070e' }}>
+      {/* Always show dungeon map — mobile gets pan/scroll mode */}
+      <DungeonMap onEnterRoom={enterRoom} activeRoom={activeRoom} />
 
       {activeRoom && ActiveComponent && (
         <div className="room-overlay">
@@ -70,34 +59,6 @@ export default function App() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-function MobileGrid({ onEnterRoom }) {
-  const items = [
-    { id:'command', icon:'⚡', name:'Command\nCenter',  desc:'Agent Status',  center:true },
-    { id:'war',     icon:'⚔', name:'War Room',         desc:'Kanban Board' },
-    { id:'office',  icon:'📅', name:'Office',           desc:'Calendar' },
-    { id:'library', icon:'📚', name:'Library',          desc:'Notes' },
-    { id:'armory',  icon:'🛡', name:'Armory',           desc:'Quick Links' },
-    { id:'forge',   icon:'🔨', name:'Forge',            desc:'ALS Checklist' },
-    { id:'vault',   icon:'🪙', name:'Vault',            desc:'Expenses' },
-    { id:'tavern',  icon:'🎮', name:'Tavern',           desc:'Break Zone' },
-  ]
-  return (
-    <div className="mobile-grid">
-      {items.map(r => (
-        <button
-          key={r.id}
-          className={`mobile-room-btn${r.center ? ' center-room' : ''}`}
-          onClick={() => onEnterRoom(r.id)}
-        >
-          <span className="mobile-room-icon">{r.icon}</span>
-          <span className="mobile-room-name" style={{ whiteSpace:'pre-line' }}>{r.name}</span>
-          <span className="mobile-room-desc">{r.desc}</span>
-        </button>
-      ))}
     </div>
   )
 }
