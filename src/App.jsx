@@ -8,17 +8,19 @@ import Armory from './rooms/Armory'
 import Forge from './rooms/Forge'
 import Vault from './rooms/Vault'
 import Tavern from './rooms/Tavern'
+import Scholar from './rooms/Scholar'
 import { playDoorSound } from './sounds'
 
 const ROOMS = {
-  command: { component: CommandCenter, name: 'Command Center', icon: '⚡' },
-  war:     { component: WarRoom,       name: 'War Room',       icon: '⚔' },
-  office:  { component: Office,        name: 'Office',         icon: '📅' },
-  library: { component: Library,       name: 'Library',        icon: '📚' },
-  armory:  { component: Armory,        name: 'Armory',         icon: '🛡' },
-  forge:   { component: Forge,         name: 'Forge',          icon: '🔨' },
-  vault:   { component: Vault,         name: 'Vault',          icon: '🪙' },
-  tavern:  { component: Tavern,        name: 'Tavern',         icon: '🎮' },
+  command: { component: CommandCenter, name: 'Command Center',    icon: '⚡' },
+  scholar: { component: Scholar,       name: "Scholar's Sanctum", icon: '📜' },
+  war:     { component: WarRoom,       name: 'War Room',          icon: '⚔' },
+  office:  { component: Office,        name: 'Office',            icon: '📅' },
+  library: { component: Library,       name: 'Library',           icon: '📚' },
+  armory:  { component: Armory,        name: 'Armory',            icon: '🛡' },
+  forge:   { component: Forge,         name: 'Forge',             icon: '🔨' },
+  vault:   { component: Vault,         name: 'Vault',             icon: '🪙' },
+  tavern:  { component: Tavern,        name: 'Tavern',            icon: '🎮' },
 }
 
 export default function App() {
