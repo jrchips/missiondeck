@@ -9,6 +9,7 @@ import Forge from './rooms/Forge'
 import Vault from './rooms/Vault'
 import Tavern from './rooms/Tavern'
 import Scholar from './rooms/Scholar'
+import { LibraryBackdrop, CommandBackdrop, TavernBackdrop } from './RoomBackdrops'
 import { playDoorSound } from './sounds'
 
 const ROOMS = {
@@ -21,6 +22,12 @@ const ROOMS = {
   forge:   { component: Forge,         name: 'Forge',             icon: '🔨' },
   vault:   { component: Vault,         name: 'Vault',             icon: '🪙' },
   tavern:  { component: Tavern,        name: 'Tavern',            icon: '🎮' },
+}
+
+const BACKDROPS = {
+  library: LibraryBackdrop,
+  command: CommandBackdrop,
+  tavern:  TavernBackdrop,
 }
 
 export default function App() {
@@ -43,20 +50,33 @@ export default function App() {
 
   const room = activeRoom ? ROOMS[activeRoom] : null
   const ActiveComponent = room?.component
+  const Backdrop = activeRoom ? BACKDROPS[activeRoom] : null
 
   return (
-    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#07070e' }}>
-      {/* Always show dungeon map — mobile gets pan/scroll mode */}
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', background: '#050308' }}>
       <DungeonMap onEnterRoom={enterRoom} activeRoom={activeRoom} />
 
       {activeRoom && ActiveComponent && (
         <div className="room-overlay">
-          <div className="room-overlay-header">
+          {/* Art backdrop — absolute, behind everything in the overlay */}
+          {Backdrop && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 0,
+              pointerEvents: 'none', overflow: 'hidden',
+            }}>
+              <Backdrop />
+            </div>
+          )}
+
+          {/* Header — floats above backdrop */}
+          <div className="room-overlay-header" style={{ position: 'relative', zIndex: 10 }}>
             <button className="back-btn" onClick={exitRoom}>◄ MAP</button>
             <span className="room-overlay-icon">{room.icon}</span>
             <span className="room-overlay-title">{room.name.toUpperCase()}</span>
           </div>
-          <div className="room-overlay-content">
+
+          {/* Scrollable content — above backdrop, below header */}
+          <div className="room-overlay-content" style={{ position: 'relative', zIndex: 1 }}>
             <ActiveComponent />
           </div>
         </div>
